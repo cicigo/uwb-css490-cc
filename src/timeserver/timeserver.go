@@ -20,17 +20,37 @@ func handleTime(w http.ResponseWriter, r *http.Request) {
 	const layout = "3:04:05PM"
 	t := time.Now()
 	content := fmt.Sprintf(`
-        <html>
-	<head>
-	<style>
-	p {font-size: xx-large}
-	span.time {color: red}
-	</style>
-	</head>
-	<body>
-	<p>The time is now <span class="time">%s</span>.</p>
-	</body>
-	</html>`, t.Format(layout))
+<html>
+<head>
+<style>
+p {font-size: xx-large}
+span.time {color: red}
+</style>
+</head>
+<body>
+<p>The time is now <span class="time">%s</span>.</p>
+</body>
+</html>`, t.Format(layout))
+	
+	fmt.Fprintf(w, content)
+}
+
+
+//handleNoCookie:
+func handleNoCookie(w http.ResponseWriter, r *http.Request) {
+	content := 
+		`
+<html>
+<body>
+<form action="login">
+  What is your name, Earthling?
+<input type="text" name="name" size="50">
+<input type="submit">
+</form>
+</p>
+</body>
+</html>
+`
 
 	fmt.Fprintf(w, content)
 }
@@ -62,7 +82,7 @@ func main() {
 	}
 
 	http.HandleFunc("/time", handleTime)
-	http.HandleFunc("/", notFoundHandler)
+	http.HandleFunc("/", handleNoCookie)
 
 	error := http.ListenAndServe(fmt.Sprintf(":%v", *portPtr), nil)
 	if error != nil {
