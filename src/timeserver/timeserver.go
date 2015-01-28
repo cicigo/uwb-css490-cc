@@ -12,7 +12,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
+	"log"
 	"time"
+	"html"
 )
 
 //handleTime: set up webpage format and display the current time
@@ -36,7 +39,7 @@ span.time {color: red}
 }
 
 
-//handleNoCookie:
+//handleNoCookie: when there is no cookie,display login form
 func handleNoCookie(w http.ResponseWriter, r *http.Request) {
 	content := 
 		`
@@ -64,11 +67,34 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 <body>
 <p>These are not the URLs you're looking for.</p>
 </body>
-</html>
-`
+</html>`
 
-	fmt.Fprint(w, content)
+	fmt.Fprintf(w, content)
 
+}
+
+//handleQuery
+func handleQuery(w http.ResponseWriter, r *http.Request) {
+	name := html.EscapeString(r.FormValue("name"))
+
+	if name != "" {
+		uuid, err := exec.Command("uuidgen").Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+			
+	
+		content := fmt.Sprintf(
+		`
+<html>
+<body>
+<p> Greetings, %s. uuid is %s.
+</p>
+</body>
+</html>`, name, uuid)
+		
+		fmt.Fprint(w, content)
+	}
 }
 
 func main() {
@@ -83,6 +109,7 @@ func main() {
 
 	http.HandleFunc("/time", handleTime)
 	http.HandleFunc("/", handleNoCookie)
+	http.HandleFunc("/login", handleQuery)
 
 	error := http.ListenAndServe(fmt.Sprintf(":%v", *portPtr), nil)
 	if error != nil {
