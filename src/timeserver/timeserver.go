@@ -16,7 +16,10 @@ import (
 	"log"
 	"time"
 	"html"
+	"sync"
 )
+
+var loginNames = make(map[string]string)
 
 //handleTime: set up webpage format and display the current time
 func handleTime(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +43,7 @@ span.time {color: red}
 
 
 //handleNoCookie: when there is no cookie,display login form
-func handleNoCookie(w http.ResponseWriter, r *http.Request) {
+func loginForm(w http.ResponseWriter, r *http.Request) {
 	content := 
 		`
 <html>
@@ -74,26 +77,34 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //handleQuery
-func handleQuery(w http.ResponseWriter, r *http.Request) {
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+	log.Println("handle login")
 	name := html.EscapeString(r.FormValue("name"))
 
 	if name != "" {
-		uuid, err := exec.Command("uuidgen").Output()
+		log.Println("a name is given, which is %s", name)
+		
+		//generate UUID for the name
+		output, err := exec.Command("uuidgen").Output()
 		if err != nil {
 			log.Fatal(err)
 		}
-			
-	
-		content := fmt.Sprintf(
-		`
-<html>
-<body>
-<p> Greetings, %s. uuid is %s.
-</p>
-</body>
-</html>`, name, uuid)
+		uuid := string(output[:])
 		
-		fmt.Fprint(w, content)
+		//add an entry to the map
+		var mutex = &sync.Mutex{}
+		mutex.Lock()
+		loginNames[uuid] = name
+		mutex.Unlock()
+
+		//generate a cookie containing a UUID
+		cookie := http.Cookie{Name: "UUID", Value: uuid}
+		http.SetCookie(w, &cookie)
+		
+		http.Redirect(w, r, "/", 302)
+	} else { 
+		log.Println("no name is given")
+		fmt.Fprintf(w, "C'mon, I need a name")
 	}
 }
 
@@ -108,8 +119,8 @@ func main() {
 	}
 
 	http.HandleFunc("/time", handleTime)
-	http.HandleFunc("/", handleNoCookie)
-	http.HandleFunc("/login", handleQuery)
+	http.HandleFunc("/", loginForm)
+	http.HandleFunc("/login", handleLogin)
 
 	error := http.ListenAndServe(fmt.Sprintf(":%v", *portPtr), nil)
 	if error != nil {
